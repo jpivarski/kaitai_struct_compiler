@@ -53,6 +53,8 @@ class CppCompiler(
   override def fileHeader(topClassName: String): Unit = {
     outSrcHeader.puts(s"// $headerComment")
     outSrcHeader.puts
+    outSrcHeader.puts("#include <iostream>")
+    outSrcHeader.puts
 
     importListSrc.addLocal(outFileNameHeader(topClassName))
 
@@ -310,6 +312,7 @@ class CppCompiler(
   }
 
   override def readFooter(): Unit = {
+    outSrc.puts("_clean_up();")
     outSrc.dec
     outSrc.puts("}")
   }
@@ -498,6 +501,21 @@ class CppCompiler(
 
   override def attrFixedContentsParse(attrName: Identifier, contents: String): Unit =
     outSrc.puts(s"${privateMemberName(attrName)} = $normalIO->ensure_fixed_contents($contents);")
+
+  override def attrParse2(
+    id: Identifier,
+    dataType: DataType,
+    io: String,
+    rep: RepeatSpec,
+    isRaw: Boolean,
+    defEndian: Option[FixedEndian],
+    assignTypeOpt: Option[DataType] = None
+  ): Unit = {
+    super.attrParse2(id, dataType, io, rep, isRaw, defEndian, assignTypeOpt)
+
+    if (kaitaiType2NativeType(dataType) == "uint8_t" || kaitaiType2NativeType(dataType) == "uint16_t")
+      outSrc.puts(s"""std::cout << "${id.humanReadable} " << (int)${privateMemberName(id)} << std::endl;""")
+  }
 
   override def attrProcess(proc: ProcessExpr, varSrc: Identifier, varDest: Identifier, rep: RepeatSpec): Unit = {
     val srcExpr = getRawIdExpr(varSrc, rep)
